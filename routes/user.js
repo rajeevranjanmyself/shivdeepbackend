@@ -9,10 +9,9 @@ const { getAllItems, insertItem, updateItem, getMultipleItemsByQuery,getSingleIt
 router.get('/users', async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
-		res.status(200).json(items);
+		res.success({data:items.Items})
 	} catch (err) {
-		console.error(err);
-		res.status(err.statusCode || 500).json({ message: err.message || 'Something went wrong' });
+		res.errors({message:'Something went wrong'})
 	}
 });
 
@@ -37,36 +36,16 @@ router.post('/login', async (req, res) => {
 			console.log("passwordIsValid",passwordIsValid);
 			
 			if (!passwordIsValid) {
-				// sendToFormator.data= {};
-				// sendToFormator.success=false;
-				// sendToFormator.message="Invalid Password";
-				// sendToFormator.status=401;
-				// res.status(401).send(responseFormat(sendToFormator));
 				res.errors({message:'invalid passord'})
 			}else{
-				// sendToFormator.data= data;
-				// sendToFormator.success=true;
-				// sendToFormator.message="User loaded successfully";
-				// sendToFormator.status=200;
-				// res.status(200).send(responseFormat(sendToFormator));
 				res.success({data:data})
 			}
 		}else{
-				// sendToFormator.data= {};
-				// sendToFormator.success=false;
-				// sendToFormator.status=401;
-				// sendToFormator.message="User not found";
-				// res.status(404).send(responseFormat(sendToFormator));
-				res.errors({message:'User not found'})
+			res.errors({message:'User not found'})
 
 		}
 	} catch (err) {
-				// sendToFormator.data= {};
-				// sendToFormator.success=false;
-				// sendToFormator.status=500;
-				// sendToFormator.message="Something went wrong";
-				// res.status(500).send(responseFormat(sendToFormator));
-				res.errors({message:'Something went wrong'})
+			res.errors({message:'Something went wrong'})
 
 	}
 });
@@ -78,10 +57,10 @@ router.post('/users', async (req, res) => {
 		body.password = bcrypt.hashSync(body.password, 8)
 		const newItem = await insertItem(TABLE_NAME, body);
 		console.log('newItem', newItem);
-		res.status(200).json(body);
+		res.success({data:newItem})
+
 	} catch (err) {
-		console.error(err);
-		res.status(err.statusCode || 500).json({ message: err.message || 'Something went wrong' });
+		res.errors({message:'Something went wrong'})
 	}
 });
 
@@ -90,10 +69,11 @@ router.put('/users/:id', async (req, res) => {
 	const body = req.body;
 	try {
 		const item = await updateItem(TABLE_NAME, id, body);
-		res.status(200).json(item);
+		res.success({data:item})
+
 	} catch (err) {
 		console.error(err);
-		res.status(err.statusCode || 500).json({ message: err.message || 'Something went wrong' });
+		res.errors({message:'Something went wrong'})
 	}
 });
 
@@ -101,10 +81,9 @@ router.get('/users/:id', async (req, res) => {
 	const id = req.params.id;
 	try {
 		const item = await getSingleItemById(TABLE_NAME, id);
-		res.status(200).json(item);
+		res.success({data:item})
 	} catch (err) {
-		console.error(err);
-		res.status(err.statusCode || 500).json({ message: err.message || 'Something went wrong' });
+		res.errors({message:'Something went wrong'})
 	}
 });
 
@@ -112,10 +91,9 @@ router.delete('/users/:id', async (req, res) => {
 	const id = req.params.id;
 	try {
 		const item = await deleteSingleItemById(TABLE_NAME, id);
-		res.status(200).json(item);
+		res.success({data:item})
 	} catch (err) {
-		console.error(err);
-		res.status(err.statusCode || 500).json({ message: err.message || 'Something went wrong' });
+		res.errors({message:'Something went wrong'})
 	}
 });
 
