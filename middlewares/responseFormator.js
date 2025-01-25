@@ -8,11 +8,12 @@ module.exports = (req, res, next) => {
     })
   }
 
-  res.errors = function ({ success = false, code = 400, error, message = 'error' }) {
+  res.errors = function ({ success = false, code = 400, error, data, message = 'error' }) {
     this.json({
       success,
       code,
       message,
+      data,
       error
     })
   }
