@@ -11,8 +11,9 @@ const {verifyToken} = require('../middlewares/verifyToken')
 const TABLE_NAME = 'users';
 
 const upload = multer({ storage: multer.memoryStorage() });
-const { getAllItems, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
-router.get('/users', verifyToken, async (req, res) => {
+const { getAllItems, generateRandomString,hashPassword,
+	comparePassword, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
+router.get('/list', verifyToken, async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
 		res.success({data:items.Items})
@@ -24,45 +25,33 @@ router.get('/users', verifyToken, async (req, res) => {
 router.post('/login', async (req, res) => {
 	const body = req.body;	
 	try {
-		if(!body.mobile){
-			res.errors({message:'Mobile Number Required'})
+		if(!body.email){
+			res.errors({message:'Email Required'})
+		}else if(!body.password){
+			res.errors({message:'Password Required'})
 		}else {
-			const indexName = "mobileIndex"
-			const keyConditionExpression = "mobile = :mobile"
+			const indexName = "emailIndex"
+			const keyConditionExpression = "email = :email"
 			const expressionAttributeValues = {
-				":mobile":body.mobile
+				":email":body.email
 			}
 			const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
 			console.log('getData', getData);
 
 			if(getData.Items.length>0){
 				const data = getData.Items[0]
-				const id = data.id
-				const KeyConditionExpression = "id = :id"; 
-				const ExpressionAttributeValues = {
-					":id":id,
-					":mobile": body.mobile,
-					":isVerifycation": true
-				}
-				const FilterExpression = "mobile = :mobile AND isVerifycation = :isVerifycation" 
-				const filterData = await filterItemsByQuery(TABLE_NAME, KeyConditionExpression, ExpressionAttributeValues, FilterExpression);
-				console.log('filterData', filterData);
-				const filterItem = filterData.Items
-				if(filterItem.length>0){
-					const data = filterItem[0]
+				const isValid = await comparePassword(body.password, data.password);
+				if(isValid){
 					const userPayload = {
 						id: data.id,          // User ID
-						username: data.userName, // Example username
 						email: data.email, // Example email
-						mobile: data.mobile, // Example mobile
-						role: data.role        // Example user role
 					};				  
 					const token = await generateAuthToken(userPayload);
 					console.log('Generated JWT:', token);
 					data.token = token
 					res.success({data:data})
 				}else{
-					res.errors({message:'User is not verified'})
+					res.errors({message:'invalid credential'})
 				}
 			}else{
 				res.errors({message:'User not found'})
@@ -74,73 +63,28 @@ router.post('/login', async (req, res) => {
 	}
 });
 
-router.post('/otpVerifycation', async (req, res) => {
-	const body = req.body;	
-	try {
-		if(!body.mobile){
-			res.errors({message:'Mobile Number Required'})
-		}else if(!body.otp){
-			res.errors({message:'otp Required'})
-		}else{
-			const indexName = "mobileIndex"
-			const keyConditionExpression = "mobile = :mobile"
-			const expressionAttributeValues = {
-				":mobile":body.mobile
-			}
-			const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
-			console.log('getData', getData);
 
-			if(getData.Items.length>0){
-				const data = getData.Items[0]
-				const id = data.id
-				const KeyConditionExpression = "id = :id"; 
-				const ExpressionAttributeValues = {
-					":id":id,
-					":mobile": body.mobile,
-					":otp": body.otp
-				}
-				const FilterExpression = "otp = :otp AND mobile = :mobile" 
-				const filterData = await filterItemsByQuery(TABLE_NAME, KeyConditionExpression, ExpressionAttributeValues, FilterExpression);
-				console.log('filterData', filterData);
-				const filterItem = filterData.Items
-				if(filterItem.length>0){
-					const id = filterItem[0].id
-					const itemObject = {
-						isVerifycation:true,
-						updatedDate:new Date().toISOString()
-					}
-					const updatedUser = await updateItem(TABLE_NAME, id, itemObject)
-					res.success({data:updatedUser})
-				}else{
-					res.errors({message:'User not found'})
-				}
-			}else{
-				res.errors({message:'User not found'})
-			}
-		}
-	} catch (err) {
-			res.errors({message:'Something went wrong', data:err})
-
-	}
-});
-
-router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
+router.post('/add', upload.single("file"), async (req, res) => {
 	const body = req.body;	
 	try {
 		if(!body.fullName){
 			res.errors({message:'Full Name Required'})
+		}else if(!body.email){
+			res.errors({message:'Email Required'})
 		}else if(!body.mobile){
 			res.errors({message:'Mobile Number Required'})
 		}else if(!body.dob){
 			res.errors({message:'Date of Birth Required'})
 		}else if(!body.gender){
 			res.errors({message:'Gender Required'})
+		}else if(!body.password){
+			res.errors({message:'Password Required'})
 		}else{
-			if(body.mobile){
-				const indexName = "mobileIndex"
-				const keyConditionExpression = "mobile = :mobile"
+			if(body.email){
+				const indexName = "emailIndex"
+				const keyConditionExpression = "email = :email"
 				const expressionAttributeValues = {
-					":mobile":body.mobile
+					":email":body.email
 				}
 				const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
 				console.log('getData', getData);
@@ -160,34 +104,23 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 						image= result.Location
 						//res.status(200).send({ message: "File uploaded successfully", url: result.Location });
 					}
-					const otp  = Math.random().toString().substring(2, 6)
-					// const params = {
-					// 	Message: `Your OTP code is: ${otp}`, // Generate a 6-digit OTP code
-					// 	PhoneNumber: '+91'+body.mobile, // Recipient's phone number from environment variables
-					// 	MessageAttributes: {
-					// 		'AWS.SNS.SMS.SenderID': {
-					// 			'DataType': 'String',
-					// 			'StringValue': 'String'
-					// 		}
-					// 	}
-					// };
-					// Send the SMS message using the defined SNS client and parameters
-					//await sendSMSMessage(params);AA;
+					const hashedPassword = await hashPassword(body.password);
+					console.log('Stored Hashed Password:', hashedPassword);
 					const item = {
 						id:body.id,
 						fullName:body.fullName,
+						email:body.email,
+						password:hashedPassword,
 						userName:body.fullName.toLowerCase().replaceAll(/\s/g,''),
-						role:body.role || 'user',
+						role:body.role || 'admin',
 						email:body.email,
 						mobile:body.mobile,
 						gender:body.gender,
 						dob:body.dob,
 						district:body.district || "",
 						state:body.state || "",
-						otp:otp,
 						image:image,
-						isVerifycation:false,
-						referralCode:await generateRandomString(8),
+						isVerifycation:true,
 						createDate:new Date().toISOString(),
 						updatedDate:new Date().toISOString()
 					}
@@ -195,7 +128,7 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 					
 					const newItem = await insertItem(TABLE_NAME, item);
 					console.log('newItem', newItem);
-					res.success({data:item, message:"otp send successfuly"})
+					res.success({data:item, message:"admin user registered successfuly"})
 				}
 			}
 		}
@@ -204,7 +137,7 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 	}
 });
 
-router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) => {
+router.put('/update/:id',verifyToken, upload.single("file"),  async (req, res) => {
 	const id = req.params.id;
 	const body = req.body;
 	try {
@@ -255,7 +188,7 @@ router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) =>
 	}
 });
 
-router.get('/users/:id', async (req, res) => {
+router.get('/get/:id', async (req, res) => {
 	const id = req.params.id;
 	try {
 		const item = await getSingleItemById(TABLE_NAME, id);
@@ -265,7 +198,7 @@ router.get('/users/:id', async (req, res) => {
 	}
 });
 
-router.delete('/users/:id', async (req, res) => {
+router.delete('/delete/:id', async (req, res) => {
 	const id = req.params.id;
 	try {
 		const item = await deleteSingleItemById(TABLE_NAME, id);

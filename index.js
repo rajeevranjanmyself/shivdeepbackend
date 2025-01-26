@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const { restrictToLoggedinUserOnly, checkAuth } = require("./middlewares/auth");
 const responseFormatter = require('./middlewares/responseFormator')
 const userRoute = require("./routes/user");
+const adminRoute = require("./routes/admin");
 
 const app = express();
 const PORT = process.env.PORT || 8001;
@@ -20,5 +21,6 @@ app.use(express.urlencoded({ extended: false }));
 
 
 app.use("/api/v1", userRoute);
+app.use("/api/v1/admin", adminRoute);
 
 app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
