@@ -105,12 +105,22 @@ router.post('/otpVerifycation', async (req, res) => {
 				const filterItem = filterData.Items
 				if(filterItem.length>0){
 					const id = filterItem[0].id
+					const data = filterItem[0]
 					const itemObject = {
 						isVerifycation:true,
 						updatedDate:new Date().toISOString()
 					}
+					const userPayload = {
+						id: data.id,          // User ID
+						username: data.userName, // Example username
+						mobile: data.mobile, // Example mobile
+						role: data.role        // Example user role
+					};				  
+					const token = await generateAuthToken(userPayload);
+					console.log('Generated JWT:', token);
+					data.token = token
 					const updatedUser = await updateItem(TABLE_NAME, id, itemObject)
-					res.success({data:updatedUser})
+					res.success({data:data})
 				}else{
 					res.errors({message:'User not found'})
 				}
