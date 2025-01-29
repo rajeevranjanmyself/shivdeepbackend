@@ -199,7 +199,30 @@ const deleteSingleItemById = async (TABLE_NAME, id) => {
 	};
 	return await DocumentClient.delete(params).promise();
 };
-
+const batchInsertLargeDataset=async(districts) =>{
+	const tableName = "districts";
+	const chunkSize = 25;
+  
+	for (let i = 0; i < districts.length; i += chunkSize) {
+	  const batch = districts.slice(i, i + chunkSize);
+  
+	  const params = {
+		RequestItems: {
+		  [tableName]: batch.map(item => ({
+			PutRequest: { Item: item }
+		  }))
+		}
+	  };
+  
+	  try {
+		await DocumentClient.batchWrite(params).promise();
+		console.log(`Inserted batch ${i / chunkSize + 1}`);
+	  } catch (error) {
+		console.error("Error inserting batch:", error);
+	  }
+	}
+  }
+  
 module.exports = {
 	DocumentClient,
 	getAllItems,
@@ -217,5 +240,6 @@ module.exports = {
 	getLastValue,
 	generateAuthToken,
 	hashPassword,
-	comparePassword
+	comparePassword,
+	batchInsertLargeDataset
 };

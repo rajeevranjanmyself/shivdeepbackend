@@ -11,7 +11,7 @@ const {verifyToken} = require('../middlewares/verifyToken')
 const TABLE_NAME = 'users';
 
 const upload = multer({ storage: multer.memoryStorage() });
-const { getAllItems, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
+const { getAllItems, batchInsertLargeDataset, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 router.get('/users', verifyToken, async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
@@ -285,4 +285,103 @@ router.delete('/users/:id', async (req, res) => {
 	}
 });
 
+router.post('/sdsdsdswevb12',async(req,res)=>{
+	try{
+		const district = [
+			{ "id": 1, "district": "Araria" },
+			{ "id": 2, "district": "Arwal" },
+			{ "id": 3, "district": "Aurangabad" },
+			{ "id": 4, "district": "Banka" },
+			{ "id": 5, "district": "Begusarai" },
+			{ "id": 6, "district": "Bhagalpur" },
+			{ "id": 7, "district": "Bhojpur" },
+			{ "id": 8, "district": "Buxar" },
+			{ "id": 9, "district": "Darbhanga" },
+			{ "id": 10, "district": "East Champaran" },
+			{ "id": 11, "district": "Gaya" },
+			{ "id": 12, "district": "Gopalganj" },
+			{ "id": 13, "district": "Jamui" },
+			{ "id": 14, "district": "Jehanabad" },
+			{ "id": 15, "district": "Kaimur" },
+			{ "id": 16, "district": "Katihar" },
+			{ "id": 17, "district": "Khagaria" },
+			{ "id": 18, "district": "Kishanganj" },
+			{ "id": 19, "district": "Lakhisarai" },
+			{ "id": 20, "district": "Madhepura" },
+			{ "id": 21, "district": "Madhubani" },
+			{ "id": 22, "district": "Munger" },
+			{ "id": 23, "district": "Muzaffarpur" },
+			{ "id": 24, "district": "Nalanda" },
+			{ "id": 25, "district": "Nawada" },
+			{ "id": 26, "district": "Patna" },
+			{ "id": 27, "district": "Purnia" },
+			{ "id": 28, "district": "Rohtas" },
+			{ "id": 29, "district": "Saharsa" },
+			{ "id": 30, "district": "Samastipur" },
+			{ "id": 31, "district": "Saran" },
+			{ "id": 32, "district": "Sheikhpura" },
+			{ "id": 33, "district": "Sheohar" },
+			{ "id": 34, "district": "Sitamarhi" },
+			{ "id": 35, "district": "Siwan" },
+			{ "id": 36, "district": "Supaul" },
+			{ "id": 37, "district": "Vaishali" },
+			{ "id": 38, "district": "West Champaran" }
+		  ]
+		  
+		const districtbatch = await batchInsertLargeDataset(district)
+		res.success({data:districtbatch, message:"inserted successfuly"})
+
+	}catch (err) {
+		res.errors({message:'Something went wrong',data:err})
+	}
+})
+router.post('/cities', async (req, res) => {
+	const body = req.body;	
+	try {
+		if(!body.name){
+			res.errors({message:'city name Required'})
+		}else if(!body.districtId){
+			res.errors({message:'districtId Required'})
+		}else{
+				const cities = await getAllItems('cities');
+				
+				body.id = cities.Items.length+1;
+
+				const isunique =cities.Items.find(city=>city.name.toLowerCase() === body.name.toLowerCase())
+				console.log('isunique',isunique,cities.Items);
+				if(isunique){
+					res.errors({message:'duplicate record',data:{}})
+				}else{
+				const item = {
+					id:body.id,
+					name:body.name,
+					districtId:body.districtId,
+					createDate:new Date().toISOString(),
+					updatedDate:new Date().toISOString()
+				}
+				const newItem = await insertItem('cities', item);
+				console.log('newItem', newItem);
+				res.success({data:item, message:"city added successfuly"})
+			}
+		}
+	} catch (err) {
+		res.errors({message:'Something went wrong',data:err})
+	}
+});
+router.get('/cities', async (req, res) => {
+	try {
+		const items = await getAllItems('cities');
+		res.success({data:items.Items})
+	} catch (err) {
+		res.errors({message:'Something went wrong'})
+	}
+});
+router.get('/districts', async (req, res) => {
+	try {
+		const items = await getAllItems('districts');
+		res.success({data:items.Items})
+	} catch (err) {
+		res.errors({message:'Something went wrong'})
+	}
+});
 module.exports = router;
