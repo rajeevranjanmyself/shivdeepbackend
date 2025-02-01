@@ -7,8 +7,9 @@ const responseFormatter = require('./middlewares/responseFormator')
 const userRoute = require("./routes/user");
 const adminRoute = require("./routes/admin");
 
+
 const app = express();
-const PORT = process.env.PORT || 8001;
+const PORT = process.env.PORT || 8002;
 
 app.use(cors());
 app.use(express.json());
@@ -20,6 +21,9 @@ app.set("views", path.resolve("./views"));
 app.use(express.urlencoded({ extended: false }));
 
 
+app.use("/", (req,res)=>{
+    return res.render("login");
+});
 app.use("/api/v1", userRoute);
 app.use("/api/v1/admin", adminRoute);
 
