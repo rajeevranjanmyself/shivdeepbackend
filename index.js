@@ -20,10 +20,6 @@ app.set("views", path.resolve("./views"));
 
 app.use(express.urlencoded({ extended: false }));
 
-
-app.use("/", (req,res)=>{
-    return res.render("login");
-});
 app.use("/api/v1", userRoute);
 app.use("/api/v1/admin", adminRoute);
 
