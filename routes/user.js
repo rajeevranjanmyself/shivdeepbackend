@@ -159,17 +159,6 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 				}else{
 					body.id = uuidv4();
 					let image = ""
-					if(req.file){
-						const bucketName = process.env.AWS_S3_BUCKET_NAME;
-						const fileContent = req.file.buffer; // File content from Multer
-						const key = `${Date.now()}_${req.file.originalname}`; // Unique filename
-						const contentType = req.file.mimetype;
-						// Upload to S3
-						const result = await uploadFileToS3(fileContent, bucketName, key, contentType);
-						console.log('result--->',result);
-						image= result.Location
-						//res.status(200).send({ message: "File uploaded successfully", url: result.Location });
-					}
 					const otp  = Math.random().toString().substring(2, 6)
 					// const params = {
 					// 	Message: `Your OTP code is: ${otp}`, // Generate a 6-digit OTP code
@@ -382,6 +371,37 @@ router.get('/districts', async (req, res) => {
 		res.success({data:items.Items})
 	} catch (err) {
 		res.errors({message:'Something went wrong'})
+	}
+});
+router.post('/districts', async (req, res) => {
+	const body = req.body;	
+	try {
+		if(!body.name){
+			res.errors({message:'district name Required'})
+		}else{
+				const districts = await getAllItems('districts');
+				
+				body.id = districts.Items.length+1;
+
+				const isunique =districts.Items.find(district=>district.name.toLowerCase() === body.name.toLowerCase())
+				console.log('isunique',isunique,districts.Items);
+				if(isunique){
+					res.errors({message:'duplicate record',data:{}})
+				}else{
+				const item = {
+					id:body.id,
+					name:body.name,
+					districtId:body.districtId,
+					createDate:new Date().toISOString(),
+					updatedDate:new Date().toISOString()
+				}
+				const newItem = await insertItem('districts', item);
+				console.log('newItem', newItem);
+				res.success({data:item, message:"districts added successfuly"})
+			}
+		}
+	} catch (err) {
+		res.errors({message:'Something went wrong',data:err})
 	}
 });
 module.exports = router;
