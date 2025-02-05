@@ -226,9 +226,6 @@ router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) =>
 				console.log(result);
 				image= result.Location				
 			}
-			//https://riteshkumarfilebucket.s3.eu-north-1.amazonaws.com/1737880358979_smsrequest.png
-
-			//const item = await updateItem(TABLE_NAME, id, body);
 			const itemObject = {
 				fullName:body.fullName || data.fullName,
 				role:body.role || data.role,

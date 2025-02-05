@@ -5,7 +5,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const TABLE_NAME = 'events';
+const TABLE_NAME = 'news';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
@@ -24,66 +24,38 @@ router.get('/:id', async (req, res) => {
 		const item = await getSingleItemById(TABLE_NAME, id);
 		res.success({data:item})
 	} catch (err) {
-		res.errors({message:'Something went wrong'})
-	}
-});
-
-router.get('/filter/:eventDate', async (req, res) => {
-	const eventDate = req.params.eventDate;
-	try {
-		const indexName = "eventDateIndex"
-		const keyConditionExpression = "eventDate = :eventDate"
-		const expressionAttributeValues = {
-			":eventDate":eventDate
-		}
-		const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
-		console.log('getData', getData);
-		res.success({data:getData.Items || []})
-	} catch (err) {
-		res.errors({message:'Something went wrong'})
+		res.errors({message:'Something went wrong'}) 
 	}
 });
 
 router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 	const body = req.body;	
 	try {
-		if(!body.eventDate){
-			res.errors({message:'eventDate Required'})
-		}else if(!body.eventStartTime){
-			res.errors({message:'eventStartTime Required'})
-		}else if(!body.eventEndTime){
-			res.errors({message:'eventEndTime Required'})
-		}else if(!body.eventTitle){
-			res.errors({message:'eventTitle Required'})
-		}else if(!body.eventDescription){
-			res.errors({message:'eventDescription Required'})
+		if(!req.file){
+			res.errors({message:'file Required'})
+		}else if(!body.title){
+			res.errors({message:'title Required'})
+		}else if(!body.description){
+			res.errors({message:'description Required'})
 		}else{
-			body.id = uuidv4();
-			let image = ""
-			if(req.file){			
-				const bucketName = process.env.AWS_S3_BUCKET_NAME;
-				if(image){
-					const key = await getLastValue(image);
-					await deleteFileFromS3(bucketName, key);
-				}
-				const fileContent = req.file.buffer; // File content from Multer
-				const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename
-				const contentType = req.file.mimetype;
-				// Upload to S3
-				const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
-				console.log(result);
-				image= result.Location				
-			}
+			body.id = uuidv4();		
+			const bucketName = process.env.AWS_S3_BUCKET_NAME;
+			const fileContent = req.file.buffer; // File content from Multer
+			const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename
+			const contentType = req.file.mimetype;
+			// Upload to S3
+			const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
+			console.log(result);
+			let image= result.Location				
+			
 			const item = {
 				id:body.id,
-				eventDate:body.eventDate,
-				eventStartTime:body.eventStartTime,
-				eventEndTime:body.eventEndTime,
-				eventTitle:body.eventTitle,
-				eventDescription:body.eventDescription,
-				url:body.url,
 				image:image,
-				totalJoined:body.totalJoined || 0,
+				title:body.title,
+				description:body.description,
+				like:[],
+				comment:[],
+				share:[],
 				createDate:new Date().toISOString(),
 				updatedDate:new Date().toISOString()
 			}
@@ -91,7 +63,7 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 			
 			const newItem = await insertItem(TABLE_NAME, item);
 			console.log('newItem', newItem);
-			res.success({data:item, message:"Events added successfuly"})
+			res.success({data:item, message:"News added successfuly"})
 		}
 	} catch (err) {
 		res.errors({message:'Something went wrong',data:err})
@@ -102,11 +74,14 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 	const id = req.params.id;
 	const body = req.body;
 	try {
-		const findUser = await getSingleItemById(TABLE_NAME, id)
-		console.log('findUser',findUser);
-		if(findUser.Item){
-			const data = findUser.Item
+		const findNews = await getSingleItemById(TABLE_NAME, id)
+		console.log('findNews',findNews);
+		if(findNews.Item){
+			const data = findNews.Item
 			let image = data.image
+			let like = data.like
+			let comment = data.comment
+			let share = data.share
 			if(req.file){			
 				const bucketName = process.env.AWS_S3_BUCKET_NAME;
 				if(image){
@@ -121,21 +96,30 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				console.log(result);
 				image= result.Location				
 			}
+			if(body.like){
+				like = [...data.like, req.user.id]
+			}
+			
+			if(body.comment){
+				comment = [...data.comment, {id:req.user.id,comment:body.comment}]
+			}
+			
+			if(body.share){
+				share = [...data.share, req.user.id]
+			}
 			const itemObject = {
-				eventDate:body.eventDate || data.eventDate ,
-				eventStartTime:body.eventStartTime || data.eventStartTime,
-				eventEndTime:body.eventEndTime || data.eventEndTime,
-				eventTitle:body.eventTitle || data.eventTitle,
-				eventDescription:body.eventDescription || data.eventDescription,
-				url:body.url || data.url,
 				image:image,
-				totalJoined:body.totalJoined || data.totalJoined,
+				title:body.title || data.title,
+				description:body.description || data.description,
+				like:like,
+				comment:comment,
+				share:share,
 				updatedDate:new Date().toISOString()
 			}
 			const updated = await updateItem(TABLE_NAME, data.id, itemObject)
-			res.success({data:updated.Attributes, message:"events updated successfully"})
+			res.success({data:updated.Attributes})
 		}else{
-		res.errors({message:'Events not found',data:{}})
+		res.errors({message:'News not found',data:{}})
 		}
 
 
