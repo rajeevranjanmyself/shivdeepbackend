@@ -1,4 +1,5 @@
 const express = require("express");
+const axios = require('axios');
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { handleUserSignup, handleUserLogin } = require("../controllers/user");
@@ -134,6 +135,51 @@ router.post('/otpVerifycation', async (req, res) => {
 	}
 });
 
+router.post('/sendOtp',async(req,res)=>{
+	const body = req.body;	
+	try{
+		if(!body.mobile){
+			res.errors({message:'mobile required'})
+		}else{
+			const otp  = Math.random().toString().substring(2, 6)
+			const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
+			console.log(response.data);
+			const resp = response.data
+			if(resp.Status ==='Success'){
+				res.success({message:"otp send successfully",data:resp})
+			}else{
+				res.errors({message:'Something went wrong'})
+			}
+		}
+	} catch (err) {
+		console.error(err);
+		res.errors({message:'Something went wrong',data:err})
+	}
+})
+router.post('/verifyOtp',async(req,res)=>{
+	const body = req.body;	
+	try{
+		if(!body.otp){
+			res.errors({message:'otp required'})
+		}else if(!body.sessionId){
+			res.errors({message:'sessionId required'})
+		}else{
+			
+			const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/VERIFY/${body.sessionId}/${body.otp}`);
+			console.log(response.data);
+			const resp = response.data
+			if(resp.Status ==='Success'){
+				res.success({message:"otp verify successfully",data:resp})
+			}else{
+				res.errors({message:'Something went wrong'})
+			}
+		}
+	} catch (err) {
+		console.error(err);
+		res.errors({message:'Something went wrong',data:err})
+	}
+})
+
 router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 	const body = req.body;	
 	try {
@@ -155,23 +201,10 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 				const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
 				console.log('getData', getData);
 				if(getData.Items.length>0){
-					res.errors({message:'User already registered'})
+						res.errors({message:'User already exist'})
 				}else{
 					body.id = uuidv4();
 					let image = ""
-					const otp  = Math.random().toString().substring(2, 6)
-					// const params = {
-					// 	Message: `Your OTP code is: ${otp}`, // Generate a 6-digit OTP code
-					// 	PhoneNumber: '+91'+body.mobile, // Recipient's phone number from environment variables
-					// 	MessageAttributes: {
-					// 		'AWS.SNS.SMS.SenderID': {
-					// 			'DataType': 'String',
-					// 			'StringValue': 'String'
-					// 		}
-					// 	}
-					// };
-					// Send the SMS message using the defined SNS client and parameters
-					//await sendSMSMessage(params);AA;
 					const item = {
 						id:body.id,
 						fullName:body.fullName,
@@ -183,18 +216,16 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 						dob:body.dob,
 						district:body.district || "",
 						state:body.state || "",
-						otp:otp,
 						image:image,
 						isVerifycation:false,
 						referralCode:await generateRandomString(8),
 						createDate:new Date().toISOString(),
 						updatedDate:new Date().toISOString()
 					}
-					console.log('item',item);
-					
 					const newItem = await insertItem(TABLE_NAME, item);
 					console.log('newItem', newItem);
-					res.success({data:item, message:"otp send successfuly"})
+					res.success({data:item, message:"user registered successfuly"})
+				
 				}
 			}
 		}
