@@ -42,10 +42,9 @@ router.post('/login', async (req, res) => {
 				const KeyConditionExpression = "id = :id"; 
 				const ExpressionAttributeValues = {
 					":id":id,
-					":mobile": body.mobile,
-					":isVerifycation": true
+					":mobile": body.mobile
 				}
-				const FilterExpression = "mobile = :mobile AND isVerifycation = :isVerifycation" 
+				const FilterExpression = "mobile = :mobile" 
 				const filterData = await filterItemsByQuery(TABLE_NAME, KeyConditionExpression, ExpressionAttributeValues, FilterExpression);
 				console.log('filterData', filterData);
 				const filterItem = filterData.Items
@@ -57,11 +56,20 @@ router.post('/login', async (req, res) => {
 						email: data.email, // Example email
 						mobile: data.mobile, // Example mobile
 						role: data.role        // Example user role
-					};				  
-					const token = await generateAuthToken(userPayload);
-					console.log('Generated JWT:', token);
-					data.token = token
-					res.success({data:data})
+					};	
+					const otp  = Math.random().toString().substring(2, 6)
+					const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
+					console.log(response.data);
+					const resp = response.data
+					if(resp.Status ==='Success'){			  
+						const token = await generateAuthToken(userPayload);
+						console.log('Generated JWT:', token);
+						data.token = token
+						data.sessionId = resp.Details
+						res.success({data:data})
+					}else{
+						res.errors({message:'Something went wrong'})
+					}
 				}else{
 					res.errors({message:'User is not verified'})
 				}
@@ -135,7 +143,7 @@ router.post('/otpVerifycation', async (req, res) => {
 	}
 });
 
-router.post('/sendOtp',async(req,res)=>{
+router.post('/sendOtp',verifyToken,async(req,res)=>{
 	const body = req.body;	
 	try{
 		if(!body.mobile){
@@ -156,6 +164,7 @@ router.post('/sendOtp',async(req,res)=>{
 		res.errors({message:'Something went wrong',data:err})
 	}
 })
+
 router.post('/verifyOtp',async(req,res)=>{
 	const body = req.body;	
 	try{
@@ -180,7 +189,7 @@ router.post('/verifyOtp',async(req,res)=>{
 	}
 })
 
-router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
+router.post('/users', upload.single("file"), async (req, res) => {
 	const body = req.body;	
 	try {
 		if(!body.fullName){
@@ -192,19 +201,23 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 		}else if(!body.gender){
 			res.errors({message:'Gender Required'})
 		}else{
-			if(body.mobile){
-				const indexName = "mobileIndex"
-				const keyConditionExpression = "mobile = :mobile"
-				const expressionAttributeValues = {
-					":mobile":body.mobile
-				}
-				const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
-				console.log('getData', getData);
-				if(getData.Items.length>0){
-						res.errors({message:'User already exist'})
-				}else{
-					body.id = uuidv4();
-					let image = ""
+			const indexName = "mobileIndex"
+			const keyConditionExpression = "mobile = :mobile"
+			const expressionAttributeValues = {
+				":mobile":body.mobile
+			}
+			const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
+			console.log('getData', getData);
+			if(getData.Items.length>0){
+					res.errors({message:'User already exist'})
+			}else{
+				body.id = uuidv4();
+				let image = ""
+				const otp  = Math.random().toString().substring(2, 6)
+				const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
+				console.log(response.data);
+				const resp = response.data
+				if(resp.Status ==='Success'){
 					const item = {
 						id:body.id,
 						fullName:body.fullName,
@@ -217,7 +230,7 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 						district:body.district || "",
 						state:body.state || "",
 						image:image,
-						isVerifycation:false,
+						sessionId:resp.Details,
 						referralCode:await generateRandomString(8),
 						createDate:new Date().toISOString(),
 						updatedDate:new Date().toISOString()
@@ -226,6 +239,8 @@ router.post('/users', verifyToken, upload.single("file"), async (req, res) => {
 					console.log('newItem', newItem);
 					res.success({data:item, message:"user registered successfuly"})
 				
+				}else{
+					res.errors({message:'Something went wrong'})
 				}
 			}
 		}
@@ -282,7 +297,7 @@ router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) =>
 	}
 });
 
-router.get('/users/:id', async (req, res) => {
+router.get('/users/:id', verifyToken, async (req, res) => {
 	const id = req.params.id;
 	try {
 		const item = await getSingleItemById(TABLE_NAME, id);
@@ -292,7 +307,7 @@ router.get('/users/:id', async (req, res) => {
 	}
 });
 
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/:id', verifyToken,async (req, res) => {
 	const id = req.params.id;
 	try {
 		const item = await deleteSingleItemById(TABLE_NAME, id);
