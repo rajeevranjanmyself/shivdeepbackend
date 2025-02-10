@@ -46,6 +46,8 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 			
 			const item = {
 				id:body.id,
+				title:body.title,
+				toggle:body.toggle  || "0",
 				image:image,
 				createDate:new Date().toISOString(),
 				updatedDate:new Date().toISOString()
@@ -63,6 +65,7 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 
 router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 	const id = req.params.id;
+	const body = req.body;
 	try {
 		const findGallery = await getSingleItemById(TABLE_NAME, id)
 		console.log('findGallery',findGallery);
@@ -83,8 +86,11 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				console.log(result);
 				image= result.Location				
 			}
+			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle
 			const itemObject = {
 				image:image,
+				title:body.title || data.title,
+				toggle:toggle,
 				updatedDate:new Date().toISOString()
 			}
 			const updated = await updateItem(TABLE_NAME, data.id, itemObject)

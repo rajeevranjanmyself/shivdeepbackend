@@ -53,9 +53,8 @@ router.post('/login', async (req, res) => {
 					const userPayload = {
 						id: data.id,          // User ID
 						username: data.userName, // Example username
-						email: data.email, // Example email
 						mobile: data.mobile, // Example mobile
-						role: data.role        // Example user role
+						userrole: data.userrole        // Example user role
 					};	
 					const otp  = Math.random().toString().substring(2, 6)
 					const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
@@ -123,7 +122,7 @@ router.post('/otpVerifycation', async (req, res) => {
 						id: data.id,          // User ID
 						username: data.userName, // Example username
 						mobile: data.mobile, // Example mobile
-						role: data.role        // Example user role
+						userrole: data.userrole        // Example user role
 					};				  
 					const token = await generateAuthToken(userPayload);
 					console.log('Generated JWT:', token);
@@ -173,12 +172,32 @@ router.post('/verifyOtp',async(req,res)=>{
 		}else if(!body.sessionId){
 			res.errors({message:'sessionId required'})
 		}else{
-			
 			const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/VERIFY/${body.sessionId}/${body.otp}`);
 			console.log(response.data);
 			const resp = response.data
 			if(resp.Status ==='Success'){
-				res.success({message:"otp verify successfully",data:resp})
+				const indexName = "sessionIdIndex"
+				const keyConditionExpression = "sessionId = :sessionId"
+				const expressionAttributeValues = {
+					":sessionId":body.sessionId
+				}
+				const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
+				console.log('getData', getData);
+	
+				if(getData.Items.length>0){
+					const data = getData.Items[0]
+					const userPayload = {
+						id: data.id,          // User ID
+						username: data.userName, // Example username
+						mobile: data.mobile, // Example mobile
+						userrole: data.userrole        // Example user role
+					};	
+					const token = await generateAuthToken(userPayload);
+					resp.token =token
+					res.success({message:"otp verify successfully",data:resp})
+				}else{
+					res.errors({message:'Verifycation failed'})
+				}
 			}else{
 				res.errors({message:'Something went wrong'})
 			}
@@ -209,7 +228,53 @@ router.post('/users', upload.single("file"), async (req, res) => {
 			const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
 			console.log('getData', getData);
 			if(getData.Items.length>0){
+				const data = getData.Items[0]
+				const id = data.id
+				const KeyConditionExpression = "id = :id"; 
+				const ExpressionAttributeValues = {
+					":id":id,
+					":mobile": body.mobile,
+					":userrole": 'user'
+				}
+				const FilterExpression = "userrole = :userrole AND mobile = :mobile" 
+				const filterData = await filterItemsByQuery(TABLE_NAME, KeyConditionExpression, ExpressionAttributeValues, FilterExpression);
+				console.log('filterData', filterData);
+				const filterItem = filterData.Items
+				if(filterItem.length>0){
 					res.errors({message:'User already exist'})
+				}else{
+					body.id = uuidv4();
+					let image = ""
+					const otp  = Math.random().toString().substring(2, 6)
+					const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
+					console.log(response.data);
+					const resp = response.data
+					if(resp.Status ==='Success'){
+						const item = {
+							id:body.id,
+							fullName:body.fullName,
+							userName:body.fullName.toLowerCase().replaceAll(/\s/g,''),
+							userrole:body.userrole || 'user',
+							email:body.email,
+							mobile:body.mobile,
+							gender:body.gender,
+							dob:body.dob,
+							district:body.district || "",
+							state:body.state || "",
+							image:image,
+							sessionId:resp.Details,
+							referralCode:await generateRandomString(8),
+							createDate:new Date().toISOString(),
+							updatedDate:new Date().toISOString()
+						}
+						const newItem = await insertItem(TABLE_NAME, item);
+						console.log('newItem', newItem);
+						res.success({data:item, message:"user registered successfuly"})
+					
+					}else{
+						res.errors({message:'Something went wrong'})
+					}
+				}
 			}else{
 				body.id = uuidv4();
 				let image = ""
@@ -222,7 +287,7 @@ router.post('/users', upload.single("file"), async (req, res) => {
 						id:body.id,
 						fullName:body.fullName,
 						userName:body.fullName.toLowerCase().replaceAll(/\s/g,''),
-						role:body.role || 'user',
+						userrole:body.userrole || 'user',
 						email:body.email,
 						mobile:body.mobile,
 						gender:body.gender,
@@ -274,7 +339,7 @@ router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) =>
 			}
 			const itemObject = {
 				fullName:body.fullName || data.fullName,
-				role:body.role || data.role,
+				userrole:body.userrole || data.userrole,
 				email:body.email || data.email,
 				mobile:body.mobile || data.mobile,
 				gender:body.gender || data.gender,

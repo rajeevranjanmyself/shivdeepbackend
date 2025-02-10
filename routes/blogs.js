@@ -48,6 +48,8 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 			
 			const item = {
 				id:body.id,
+				title:body.title,
+				toggle:body.toggle || "0",
 				content:body.content,
 				image:image,
 				createDate:new Date().toISOString(),
@@ -88,8 +90,12 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				console.log(result);
 				image= result.Location				
 			}
+			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle
+
 			const itemObject = {
 				image:image,
+				title:body.title || data.title,
+				toggle:toggle,
 				content:body.content || data.content,
 				updatedDate:new Date().toISOString()
 			}

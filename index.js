@@ -14,6 +14,7 @@ const termConditionRoute = require("./routes/termCondition");
 const faqRoute = require("./routes/faq");
 const contactusRoute = require("./routes/contactus");
 const newsRoute = require("./routes/news");
+const missionRoute = require("./routes/mission");
 
 const app = express();
 const PORT = process.env.PORT || 8002;
@@ -37,5 +38,6 @@ app.use("/api/v1/termCondition", termConditionRoute);
 app.use("/api/v1/faq", faqRoute);
 app.use("/api/v1/contactus", contactusRoute);
 app.use("/api/v1/news", newsRoute);
+app.use("/api/v1/mission", missionRoute);
 
 app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));

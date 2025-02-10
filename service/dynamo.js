@@ -222,10 +222,41 @@ const batchInsertLargeDataset=async(districts) =>{
 	  }
 	}
   }
+const renameColumn = async(oldName, newName) => {
+	const tableName = 'users'
+	try {
+	  // Step 1: Scan all items
+	  const scanParams = { TableName: tableName };
+	  const scanResult = await DocumentClient.scan(scanParams).promise();
   
+	  for (const item of scanResult.Items) {
+		const primaryKey = { id: item.id }; // Change 'id' to your actual primary key
+  
+		// Step 2: Copy data to the new attribute
+		const updateParams = {
+		  TableName: tableName,
+		  Key: primaryKey,
+		  UpdateExpression: `SET #newAttr = :newValue REMOVE #oldAttr`,
+		  ExpressionAttributeNames: {
+			"#newAttr": newName,
+			"#oldAttr": oldName
+		  },
+		  ExpressionAttributeValues: {
+			":newValue": item[oldName]
+		  }
+		};
+  
+		await DocumentClient.update(updateParams).promise();
+		console.log(`Updated item ${item.id}: Renamed '${oldName}' to '${newName}'`);
+	  }
+	} catch (error) {
+	  console.error("Error renaming column:", error.message);
+	}
+  }
 module.exports = {
 	DocumentClient,
 	getAllItems,
+	renameColumn,
 	filterItemsByQuery,
 	getMultipleItemsByQuery,
 	getSingleItemById,

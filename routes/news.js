@@ -52,6 +52,8 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 				id:body.id,
 				image:image,
 				title:body.title,
+				toggle:body.toggle || "0",
+				newsDate:body.newsDate,
 				description:body.description,
 				like:[],
 				comment:[],
@@ -107,9 +109,12 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 			if(body.share){
 				share = [...data.share, req.user.id]
 			}
+			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle
 			const itemObject = {
 				image:image,
 				title:body.title || data.title,
+				toggle:toggle,
+				newsDate:body.newsDate || data.newsDate,
 				description:body.description || data.description,
 				like:like,
 				comment:comment,
