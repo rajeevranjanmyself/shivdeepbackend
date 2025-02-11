@@ -1,6 +1,8 @@
 const express = require("express");
 const path = require("path");
+const fs = require('fs');
 const cors = require('cors');
+const https = require("https");
 const cookieParser = require("cookie-parser");
 const { restrictToLoggedinUserOnly, checkAuth } = require("./middlewares/auth");
 const responseFormatter = require('./middlewares/responseFormator')
@@ -18,7 +20,11 @@ const missionRoute = require("./routes/mission");
 
 const app = express();
 const PORT = process.env.PORT || 8002;
-
+// Load SSL Certificate
+const options = {
+    key: fs.readFileSync("./privkey.pem"),
+    cert: fs.readFileSync("./fullchain.pem")
+  };
 app.use(cors());
 app.use(express.json());
 //app.use(morgan('dev'));
@@ -40,4 +46,8 @@ app.use("/api/v1/contactus", contactusRoute);
 app.use("/api/v1/news", newsRoute);
 app.use("/api/v1/mission", missionRoute);
 
-app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
+//app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
+// Create HTTPS Server
+https.createServer(options, app).listen(PORT, () => {
+    console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
+  });
