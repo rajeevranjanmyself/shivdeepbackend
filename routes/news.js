@@ -12,7 +12,8 @@ const { getAllItems, generateRandomString, getLastValue,generateAuthToken,upload
 router.get('/', async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
-		res.success({data:items.Items})
+		const restrictedNews  = items.Items.length>0? items.Items.filter(val=> val.isVisible=='true'):[]
+		res.success({data:restrictedNews})
 	} catch (err) {
 		res.errors({message:'Something went wrong'})
 	}
@@ -52,6 +53,7 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 				id:body.id,
 				image:image,
 				title:body.title,
+				isVisible:false,
 				toggle:body.toggle || "0",
 				newsDate:body.newsDate,
 				description:body.description,
