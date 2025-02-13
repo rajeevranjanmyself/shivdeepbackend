@@ -22,6 +22,33 @@ router.get('/users', verifyToken, async (req, res) => {
 	}
 });
 
+router.get('/checkUserExist/:mobile', async (req, res) => {
+	const mobile = req.params.mobile;	
+	console.log('mobile---',mobile);
+	
+	try {
+		if(!mobile){
+			res.errors({message:'Mobile Number Required'})
+		}else {
+			const indexName = "mobileIndex"
+			const keyConditionExpression = "mobile = :mobile"
+			const expressionAttributeValues = {
+				":mobile":mobile
+			}
+			const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
+			console.log('getData', getData);
+
+			if(getData.Items.length>0){
+				res.success({message:'User found'})
+			}else{
+				res.errors({message:'User not found'})
+			}
+		}
+	} catch (err) {
+			res.errors({message:'Something went wrong',data:err})
+	}
+});
+
 router.post('/login', async (req, res) => {
 	const body = req.body;	
 	try {
@@ -38,18 +65,6 @@ router.post('/login', async (req, res) => {
 
 			if(getData.Items.length>0){
 				const data = getData.Items[0]
-				const id = data.id
-				const KeyConditionExpression = "id = :id"; 
-				const ExpressionAttributeValues = {
-					":id":id,
-					":mobile": body.mobile
-				}
-				const FilterExpression = "mobile = :mobile" 
-				const filterData = await filterItemsByQuery(TABLE_NAME, KeyConditionExpression, ExpressionAttributeValues, FilterExpression);
-				console.log('filterData', filterData);
-				const filterItem = filterData.Items
-				if(filterItem.length>0){
-					const data = filterItem[0]
 					const userPayload = {
 						id: data.id,          // User ID
 						username: data.userName, // Example username
@@ -65,6 +80,11 @@ router.post('/login', async (req, res) => {
 						console.log('Generated JWT:', token);
 						data.token = token
 						data.sessionId = resp.Details
+						const itemObject = {
+							sessionId: data.sessionId,
+							updatedDate:new Date().toISOString()
+						}
+						await updateItem(TABLE_NAME, data.id, itemObject)
 						res.success({data:data})
 					}else{
 						res.errors({message:'Something went wrong'})
@@ -72,9 +92,6 @@ router.post('/login', async (req, res) => {
 				}else{
 					res.errors({message:'User is not verified'})
 				}
-			}else{
-				res.errors({message:'User not found'})
-			}
 		}
 	} catch (err) {
 			res.errors({message:'Something went wrong',data:err})
@@ -142,6 +159,28 @@ router.post('/otpVerifycation', async (req, res) => {
 	}
 });
 
+router.post('/sendOtpUnAuth',async(req,res)=>{
+	const body = req.body;	
+	try{
+		if(!body.mobile){
+			res.errors({message:'mobile required'})
+		}else{
+			const otp  = Math.random().toString().substring(2, 6)
+			const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
+			console.log(response.data);
+			const resp = response.data
+			if(resp.Status ==='Success'){
+				res.success({message:"otp send successfully",data:resp})
+			}else{
+				res.errors({message:'Something went wrong'})
+			}
+		}
+	} catch (err) {
+		console.error(err);
+		res.errors({message:'Something went wrong',data:err})
+	}
+})
+
 router.post('/sendOtp',verifyToken,async(req,res)=>{
 	const body = req.body;	
 	try{
@@ -196,7 +235,7 @@ router.post('/verifyOtp',async(req,res)=>{
 					resp.token =token
 					res.success({message:"otp verify successfully",data:resp})
 				}else{
-					res.errors({message:'Verifycation failed'})
+					res.success({message:"otp verify successfully",data:resp})
 				}
 			}else{
 				res.errors({message:'Something went wrong'})
@@ -219,6 +258,8 @@ router.post('/users', upload.single("file"), async (req, res) => {
 			res.errors({message:'Date of Birth Required'})
 		}else if(!body.gender){
 			res.errors({message:'Gender Required'})
+		}else if(!body.sessionId){
+			res.errors({message:'sessionId Required'})
 		}else{
 			const indexName = "mobileIndex"
 			const keyConditionExpression = "mobile = :mobile"
@@ -245,68 +286,63 @@ router.post('/users', upload.single("file"), async (req, res) => {
 				}else{
 					body.id = uuidv4();
 					let image = ""
-					const otp  = Math.random().toString().substring(2, 6)
-					const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
-					console.log(response.data);
-					const resp = response.data
-					if(resp.Status ==='Success'){
-						const item = {
-							id:body.id,
-							fullName:body.fullName,
-							userName:body.fullName.toLowerCase().replaceAll(/\s/g,''),
-							userrole:body.userrole || 'user',
-							email:body.email,
-							mobile:body.mobile,
-							gender:body.gender,
-							dob:body.dob,
-							district:body.district || "",
-							state:body.state || "",
-							image:image,
-							sessionId:resp.Details,
-							referralCode:await generateRandomString(8),
-							createDate:new Date().toISOString(),
-							updatedDate:new Date().toISOString()
-						}
-						const newItem = await insertItem(TABLE_NAME, item);
-						console.log('newItem', newItem);
-						res.success({data:item, message:"user registered successfuly"})
-					
-					}else{
-						res.errors({message:'Something went wrong'})
-					}
-				}
-			}else{
-				body.id = uuidv4();
-				let image = ""
-				const otp  = Math.random().toString().substring(2, 6)
-				const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
-				console.log(response.data);
-				const resp = response.data
-				if(resp.Status ==='Success'){
+					// const otp  = Math.random().toString().substring(2, 6)
+					// const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
+					// console.log(response.data);
+					// const resp = response.data
+					//if(resp.Status ==='Success'){
 					const item = {
 						id:body.id,
 						fullName:body.fullName,
 						userName:body.fullName.toLowerCase().replaceAll(/\s/g,''),
 						userrole:body.userrole || 'user',
-						email:body.email,
+						email:body.email || "",
 						mobile:body.mobile,
 						gender:body.gender,
 						dob:body.dob,
 						district:body.district || "",
 						state:body.state || "",
 						image:image,
-						sessionId:resp.Details,
+						sessionId:body.sessionId || "1234",
 						referralCode:await generateRandomString(8),
 						createDate:new Date().toISOString(),
 						updatedDate:new Date().toISOString()
 					}
 					const newItem = await insertItem(TABLE_NAME, item);
+					const userPayload = {
+						id: item.id,          // User ID
+						username: item.userName, // Example username
+						mobile: item.mobile, // Example mobile
+						userrole: item.userrole        // Example user role
+					};	
+					const token = await generateAuthToken(userPayload);
+					item.token =token
 					console.log('newItem', newItem);
 					res.success({data:item, message:"user registered successfuly"})
-				
-				}else{
-					res.errors({message:'Something went wrong'})
 				}
+			}else{
+				body.id = uuidv4();
+				let image = ""
+				const item = {
+					id:body.id,
+					fullName:body.fullName,
+					userName:body.fullName.toLowerCase().replaceAll(/\s/g,''),
+					userrole:body.userrole || 'user',
+					email:body.email || "",
+					mobile:body.mobile,
+					gender:body.gender,
+					dob:body.dob,
+					district:body.district || "",
+					state:body.state || "",
+					image:image,
+					sessionId:body.sessionId || "1234",
+					referralCode:await generateRandomString(8),
+					createDate:new Date().toISOString(),
+					updatedDate:new Date().toISOString()
+				}
+				const newItem = await insertItem(TABLE_NAME, item);
+				console.log('newItem', newItem);
+				res.success({data:item, message:"user registered successfuly"})
 			}
 		}
 	} catch (err) {

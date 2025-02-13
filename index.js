@@ -46,8 +46,8 @@ app.use("/api/v1/contactus", contactusRoute);
 app.use("/api/v1/news", newsRoute);
 app.use("/api/v1/mission", missionRoute);
 
-//app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
+app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
 // Create HTTPS Server
-https.createServer(options, app).listen(PORT, () => {
-    console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
-  });
+// https.createServer(options, app).listen(PORT, () => {
+//     console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
+//   });
