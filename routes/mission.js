@@ -31,17 +31,14 @@ router.get('/:id', async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
 	const body = req.body;	
 	try {
-		if(!body.title){
-			res.errors({message:'title Required'})
-		}else if(!body.description){
-			res.errors({message:'description Required'})
+		if(!body.content){
+			res.errors({message:'content Required'})
 		}else{
 			body.id = uuidv4();					
 			const item = {
 				id:body.id,
-				title:body.title,
 				toggle:body.toggle || 0,
-				description:body.description,
+				content:body.content,
 				createDate:new Date().toISOString(),
 				updatedDate:new Date().toISOString()
 			}
@@ -66,8 +63,7 @@ router.put('/:id',verifyToken,   async (req, res) => {
 			const data = findMission.Item
 			const toggle= (body.toggle===1 || body.toggle===0)?body.toggle:data.toggle
 			const itemObject = {
-				title:body.title || data.title,
-				description:body.description || data.description,
+				content:body.content,
 				toggle:toggle,
 				updatedDate:new Date().toISOString()
 			}
