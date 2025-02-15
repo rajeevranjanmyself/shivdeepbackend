@@ -269,60 +269,12 @@ router.post('/users', upload.single("file"), async (req, res) => {
 			const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
 			console.log('getData', getData);
 			if(getData.Items.length>0){
-				const data = getData.Items[0]
-				const id = data.id
-				const KeyConditionExpression = "id = :id"; 
-				const ExpressionAttributeValues = {
-					":id":id,
-					":mobile": body.mobile,
-					":userrole": 'user'
-				}
-				const FilterExpression = "userrole = :userrole AND mobile = :mobile" 
-				const filterData = await filterItemsByQuery(TABLE_NAME, KeyConditionExpression, ExpressionAttributeValues, FilterExpression);
-				console.log('filterData', filterData);
-				const filterItem = filterData.Items
-				if(filterItem.length>0){
-					res.errors({message:'User already exist'})
-				}else{
-					body.id = uuidv4();
-					let image = ""
-					// const otp  = Math.random().toString().substring(2, 6)
-					// const response = await axios.get(`https://2factor.in/API/V1/${process.env.SMS_KEY}/SMS/+91${body.mobile}/${otp}/OTP1`);
-					// console.log(response.data);
-					// const resp = response.data
-					//if(resp.Status ==='Success'){
-					const item = {
-						id:body.id,
-						fullName:body.fullName,
-						userName:body.fullName.toLowerCase().replaceAll(/\s/g,''),
-						userrole:body.userrole || 'user',
-						email:body.email || "",
-						mobile:body.mobile,
-						gender:body.gender,
-						dob:body.dob,
-						district:body.district || "",
-						state:body.state || "",
-						image:image,
-						sessionId:body.sessionId || "1234",
-						referralCode:await generateRandomString(8),
-						createDate:new Date().toISOString(),
-						updatedDate:new Date().toISOString()
-					}
-					const newItem = await insertItem(TABLE_NAME, item);
-					const userPayload = {
-						id: item.id,          // User ID
-						username: item.userName, // Example username
-						mobile: item.mobile, // Example mobile
-						userrole: item.userrole        // Example user role
-					};	
-					const token = await generateAuthToken(userPayload);
-					item.token =token
-					console.log('newItem', newItem);
-					res.success({data:item, message:"user registered successfuly"})
-				}
+				res.errors({message:'User already exist'})
 			}else{
 				body.id = uuidv4();
 				let image = ""
+				
+				const isMember= (body.isMember=="true" || body.isMember=="false")?body.isMember:false
 				const item = {
 					id:body.id,
 					fullName:body.fullName,
@@ -334,13 +286,24 @@ router.post('/users', upload.single("file"), async (req, res) => {
 					dob:body.dob,
 					district:body.district || "",
 					state:body.state || "",
+					dateOfJoining:body.dateOfJoining?new Date(body.dateOfJoining).toISOString() : "",
 					image:image,
+					isMember:isMember,
+					memberId:Date.now(),
 					sessionId:body.sessionId || "1234",
 					referralCode:await generateRandomString(8),
 					createDate:new Date().toISOString(),
 					updatedDate:new Date().toISOString()
 				}
 				const newItem = await insertItem(TABLE_NAME, item);
+				const userPayload = {
+					id: item.id,          // User ID
+					username: item.userName, // Example username
+					mobile: item.mobile, // Example mobile
+					userrole: item.userrole        // Example user role
+				};	
+				const token = await generateAuthToken(userPayload);
+				item.token =token
 				console.log('newItem', newItem);
 				res.success({data:item, message:"user registered successfuly"})
 			}
@@ -358,6 +321,10 @@ router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) =>
 		console.log('findUser',findUser);
 		if(findUser.Item){
 			const data = findUser.Item
+			const isMember= (body.isMember=="true" || body.isMember=="false")?body.isMember:data.isMember
+			const dateOfJoining =body.dateOfJoining?new Date(body.dateOfJoining).toISOString() : data.dateOfJoining
+			console.log('dateOfJoining',dateOfJoining);
+			
 			let image = data.image
 			if(req.file){			
 				const bucketName = process.env.AWS_S3_BUCKET_NAME;
@@ -382,7 +349,9 @@ router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) =>
 				dob:body.dob || data.dob,
 				district:body.district || data.gender,
 				state:body.state || data.state,
+				dateOfJoining:dateOfJoining,
 				image:image,
+				isMember:isMember,
 				updatedDate:new Date().toISOString()
 			}
 			const updatedUser = await updateItem(TABLE_NAME, data.id, itemObject)
