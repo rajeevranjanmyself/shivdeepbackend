@@ -318,7 +318,7 @@ router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) =>
 	const body = req.body;
 	try {
 		const findUser = await getSingleItemById(TABLE_NAME, id)
-		console.log('findUser',findUser);
+		console.log('findUser',findUser,req.file);
 		if(findUser.Item){
 			const data = findUser.Item
 			const isMember= (body.isMember=="true" || body.isMember=="false")?body.isMember:data.isMember
