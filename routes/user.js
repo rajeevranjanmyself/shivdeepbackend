@@ -347,7 +347,7 @@ router.put('/users/:id',verifyToken, upload.single("file"),  async (req, res) =>
 				mobile:body.mobile || data.mobile,
 				gender:body.gender || data.gender,
 				dob:body.dob || data.dob,
-				district:body.district || data.gender,
+				district:body.district || data.district,
 				state:body.state || data.state,
 				dateOfJoining:dateOfJoining,
 				image:image,
