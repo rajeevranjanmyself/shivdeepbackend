@@ -5,15 +5,14 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const TABLE_NAME = 'news';
+const TABLE_NAME = 'banner';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 router.get('/', async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
-		const restrictedNews  = items.Items.length>0? items.Items.filter(val=> val.isVisible=='true'):[]
-		res.success({data:restrictedNews})
+		res.success({data:items.Items})
 	} catch (err) {
 		res.errors({message:'Something went wrong'})
 	}
@@ -25,7 +24,7 @@ router.get('/:id', async (req, res) => {
 		const item = await getSingleItemById(TABLE_NAME, id);
 		res.success({data:item})
 	} catch (err) {
-		res.errors({message:'Something went wrong'}) 
+		res.errors({message:'Something went wrong'})
 	}
 });
 
@@ -34,10 +33,6 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 	try {
 		if(!req.file){
 			res.errors({message:'file Required'})
-		}else if(!body.title){
-			res.errors({message:'title Required'})
-		}else if(!body.description){
-			res.errors({message:'description Required'})
 		}else{
 			body.id = uuidv4();		
 			const bucketName = process.env.AWS_S3_BUCKET_NAME;
@@ -51,15 +46,10 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 			
 			const item = {
 				id:body.id,
-				image:image,
 				title:body.title,
-				isVisible:false,
-				toggle:body.toggle || "0",
-				newsDate:body.newsDate,
-				description:body.description,
-				like:[],
-				comment:[],
-				share:[],
+				content:body.content,
+				image:image,
+				isActive:body.isActive || "true",
 				createDate:new Date().toISOString(),
 				updatedDate:new Date().toISOString()
 			}
@@ -67,7 +57,7 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 			
 			const newItem = await insertItem(TABLE_NAME, item);
 			console.log('newItem', newItem);
-			res.success({data:item, message:"News added successfuly"})
+			res.success({data:item, message:"Banner added successfuly"})
 		}
 	} catch (err) {
 		res.errors({message:'Something went wrong',data:err})
@@ -78,14 +68,11 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 	const id = req.params.id;
 	const body = req.body;
 	try {
-		const findNews = await getSingleItemById(TABLE_NAME, id)
-		console.log('findNews',findNews);
-		if(findNews.Item){
-			const data = findNews.Item
+		const findBanner = await getSingleItemById(TABLE_NAME, id)
+		console.log('findBanner',findBanner);
+		if(findBanner.Item){
+			const data = findBanner.Item
 			let image = data.image
-			let like = data.like
-			let comment = data.comment
-			let share = data.share
 			if(req.file){			
 				const bucketName = process.env.AWS_S3_BUCKET_NAME;
 				if(image){
@@ -100,33 +87,17 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				console.log(result);
 				image= result.Location				
 			}
-			if(body.like){
-				like = [...data.like, req.user.id]
-			}
-			
-			if(body.comment){
-				comment = [...data.comment, {id:req.user.id,comment:body.comment}]
-			}
-			
-			if(body.share){
-				share = [...data.share, req.user.id]
-			}
-			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle
 			const itemObject = {
-				image:image,
 				title:body.title || data.title,
-				toggle:toggle,
-				newsDate:body.newsDate || data.newsDate,
-				description:body.description || data.description,
-				like:like,
-				comment:comment,
-				share:share,
+				content:body.content || data.content,
+				image:image,
+				isActive:body.isActive || data.isActive,
 				updatedDate:new Date().toISOString()
 			}
 			const updated = await updateItem(TABLE_NAME, data.id, itemObject)
 			res.success({data:updated.Attributes})
 		}else{
-		res.errors({message:'News not found',data:{}})
+		res.errors({message:'Banner not found',data:{}})
 		}
 
 

@@ -17,6 +17,7 @@ const faqRoute = require("./routes/faq");
 const contactusRoute = require("./routes/contactus");
 const newsRoute = require("./routes/news");
 const missionRoute = require("./routes/mission");
+const bannerRoute = require("./routes/banner");
 
 const app = express();
 const PORT = process.env.PORT || 8002;
@@ -45,9 +46,10 @@ app.use("/api/v1/faq", faqRoute);
 app.use("/api/v1/contactus", contactusRoute);
 app.use("/api/v1/news", newsRoute);
 app.use("/api/v1/mission", missionRoute);
+app.use("/api/v1/banner", bannerRoute);
 
-//app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
+app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
 // Create HTTPS Server
-https.createServer(options, app).listen(PORT, () => {
-    console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
-  });
+// https.createServer(options, app).listen(PORT, () => {
+//     console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
+//   });

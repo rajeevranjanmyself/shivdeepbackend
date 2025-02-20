@@ -152,7 +152,7 @@ router.put('/update/:id',verifyToken, upload.single("file"),  async (req, res) =
 				const bucketName = process.env.AWS_S3_BUCKET_NAME;
 				if(image){
 					const key = await getLastValue(image);
-					await deleteFileFromS3(bucketName, key);
+					//await deleteFileFromS3(bucketName, key);
 				}
 				const fileContent = req.file.buffer; // File content from Multer
 				const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename

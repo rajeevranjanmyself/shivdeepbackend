@@ -82,6 +82,7 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 				eventTitle:body.eventTitle,
 				eventDescription:body.eventDescription,
 				url:body.url,
+				toggle:body.toggle  || "0",
 				image:image,
 				totalJoined:body.totalJoined || 0,
 				createDate:new Date().toISOString(),
@@ -121,6 +122,8 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				console.log(result);
 				image= result.Location				
 			}
+			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle
+			
 			const itemObject = {
 				eventDate:body.eventDate || data.eventDate ,
 				eventStartTime:body.eventStartTime || data.eventStartTime,
@@ -129,6 +132,7 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				eventDescription:body.eventDescription || data.eventDescription,
 				url:body.url || data.url,
 				image:image,
+				toggle:toggle,
 				totalJoined:body.totalJoined || data.totalJoined,
 				updatedDate:new Date().toISOString()
 			}
