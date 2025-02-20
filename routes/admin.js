@@ -214,7 +214,7 @@ const NEWS_TABLE_NAME = 'news'
 router.get('/news', async (req, res) => {
 	try {
 		const items = await getAllItems(NEWS_TABLE_NAME);
-		const restrictedNews  = items.Items.length>0? items.Items.filter(val=> val.isVisible=='true'):[]
+		const restrictedNews  = items.Items.length>0? items.Items:[]
 		res.success({data:restrictedNews})
 	} catch (err) {
 		res.errors({message:'Something went wrong'})
