@@ -18,6 +18,8 @@ const contactusRoute = require("./routes/contactus");
 const newsRoute = require("./routes/news");
 const missionRoute = require("./routes/mission");
 const bannerRoute = require("./routes/banner");
+const dashboardRoute = require("./routes/dashboard");
+const chatRoute = require("./routes/chat");
 
 const app = express();
 const PORT = process.env.PORT || 8002;
@@ -47,6 +49,8 @@ app.use("/api/v1/contactus", contactusRoute);
 app.use("/api/v1/news", newsRoute);
 app.use("/api/v1/mission", missionRoute);
 app.use("/api/v1/banner", bannerRoute);
+app.use("/api/v1/dashboard", dashboardRoute);
+app.use("/api/v1/chat", chatRoute);
 
 //app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
 // Create HTTPS Server

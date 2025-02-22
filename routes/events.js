@@ -64,7 +64,7 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 				const bucketName = process.env.AWS_S3_BUCKET_NAME;
 				if(image){
 					const key = await getLastValue(image);
-					await deleteFileFromS3(bucketName, key);
+					//await deleteFileFromS3(bucketName, key);
 				}
 				const fileContent = req.file.buffer; // File content from Multer
 				const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename
@@ -80,6 +80,7 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 				eventStartTime:body.eventStartTime,
 				eventEndTime:body.eventEndTime,
 				eventTitle:body.eventTitle,
+				eventType:body.eventType,
 				eventDescription:body.eventDescription,
 				url:body.url,
 				toggle:body.toggle  || "0",
@@ -112,7 +113,7 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				const bucketName = process.env.AWS_S3_BUCKET_NAME;
 				if(image){
 					const key = await getLastValue(image);
-					await deleteFileFromS3(bucketName, key);
+					//await deleteFileFromS3(bucketName, key);
 				}
 				const fileContent = req.file.buffer; // File content from Multer
 				const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename
@@ -130,6 +131,7 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				eventEndTime:body.eventEndTime || data.eventEndTime,
 				eventTitle:body.eventTitle || data.eventTitle,
 				eventDescription:body.eventDescription || data.eventDescription,
+				eventType:body.eventType || data.eventType,
 				url:body.url || data.url,
 				image:image,
 				toggle:toggle,

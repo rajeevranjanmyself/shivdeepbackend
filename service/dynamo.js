@@ -123,6 +123,21 @@ const getAllItems = async (TABLE_NAME) => {
 	return await DocumentClient.scan(params).promise();
 };
 
+
+const countRecords = async(TABLE_NAME) => {
+	const params = {
+	  TableName: TABLE_NAME,
+	  Select: "COUNT", // Only return the count of items
+	};
+  
+	try {
+	  const data = await DocumentClient.scan(params).promise();
+	  return data.Count
+	} catch (error) {
+	  console.error("Error counting records:", error);
+	}
+  }
+
 const filterItemsByQuery = async (TABLE_NAME, KeyConditionExpression, ExpressionAttributeValues, FilterExpression) => {
 	var params = {
 		TableName: TABLE_NAME,
@@ -160,6 +175,62 @@ const insertItem = async (TABLE_NAME, itemObject) => {
 	};
 	return await DocumentClient.put(params).promise();
 };
+
+
+
+const getUserMessage = async(senderId, receiverId)=> {
+	const params = {
+		TableName: 'chat',
+		FilterExpression:
+		  "(senderId = :sender AND receiverId = :receiver) OR (senderId = :receiver AND receiverId = :sender)",
+		ExpressionAttributeValues: {
+		  ":sender": senderId,
+		  ":receiver": receiverId,
+		},
+	  };
+	return await DocumentClient.scan(params).promise();
+}
+
+
+const getAdminMessage = async(adminId)=> {
+  // Check if user is an admin
+  const adminCheckParams = {
+    TableName: 'admin',
+    Key: { id: adminId },
+  };
+
+  try {
+    const adminData = await DocumentClient.get(adminCheckParams).promise();
+    if (!adminData.Item || !adminData.Item.role =='admin') {
+      return {data:"Access denied ! . only admin can access"};
+    }
+
+    // Find all unique users admin has chatted with
+    const chatUsersParams = {
+      TableName: 'chat',
+      FilterExpression: "senderId = :admin OR receiverId = :admin",
+      ExpressionAttributeValues: { ":admin": adminId },
+    };
+
+    const chatData = await DocumentClient.scan(chatUsersParams).promise();
+    const uniqueUserIds = [
+      ...new Set(chatData.Items.map((msg) => (msg.senderId === adminId ? msg.receiverId : msg.senderId))),
+    ];
+
+    // Fetch user details
+    const userDetails = await Promise.all(
+      uniqueUserIds.map(async (userId) => {
+        const userParams = { TableName: 'users', Key: { id:userId } };
+        const userData = await DocumentClient.get(userParams).promise();
+        return userData.Item;
+      })
+    );
+	return {data:userDetails};
+} catch (error) {
+	return {data:error}
+   // res.status(500).json({ error: error.message });
+  }
+}
 
 const generateUpdateQuery = (fields) => {
 	let exp = {
@@ -256,6 +327,9 @@ const renameColumn = async(oldName, newName) => {
 module.exports = {
 	DocumentClient,
 	getAllItems,
+	getAdminMessage,
+	getUserMessage,
+	countRecords,
 	renameColumn,
 	filterItemsByQuery,
 	getMultipleItemsByQuery,

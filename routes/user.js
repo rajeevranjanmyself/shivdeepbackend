@@ -12,7 +12,8 @@ const {verifyToken} = require('../middlewares/verifyToken')
 const TABLE_NAME = 'users';
 
 const upload = multer({ storage: multer.memoryStorage() });
-const { getAllItems, batchInsertLargeDataset, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
+const { getAllItems, batchInsertLargeDataset, 
+	generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 router.get('/users', verifyToken, async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
