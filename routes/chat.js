@@ -22,6 +22,7 @@ const upload = multer({ storage: multer.memoryStorage(), fileFilter });
 const { getAllItems, batchInsertLargeDataset, 
 	getAdminMessage,
 	getUserMessage,
+	getUsersMessage,
 	generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 
 
@@ -120,5 +121,20 @@ router.get("/admin/:adminId", async (req, res) => {
 		res.errors({message:'Something went wrong'})
 	}
 });
-
+/**
+ * ✅ Fetch chat messages user
+ */
+router.get("/users/:userId", async (req, res) => {
+	const userId = req.params.userId;
+	try {
+		if(!userId){
+			res.errors({message:'userId Required'})
+		}else{
+			const item = await getUsersMessage(userId)
+			res.success({data:item, message:"user chat fetch successfuly"})
+		}
+	} catch (err) {
+		res.errors({message:'Something went wrong'})
+	}
+});
 module.exports = router;

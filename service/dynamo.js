@@ -232,6 +232,39 @@ const getAdminMessage = async(adminId)=> {
   }
 }
 
+const getUsersMessage = async(userId)=> {
+	try {
+  
+	  // Find all unique users admin has chatted with
+	  const chatUsersParams = {
+		TableName: 'chat',
+		FilterExpression: "senderId = :admin OR receiverId = :admin",
+		ExpressionAttributeValues: { ":admin": userId },
+	  };
+  
+	  const chatData = await DocumentClient.scan(chatUsersParams).promise();
+	  
+	  const uniqueUserIds = [
+		...new Set(chatData.Items.map((msg) => msg.senderId)),
+	  ];
+
+	  // Fetch user details
+	  const userDetails = await Promise.all(
+		uniqueUserIds.map(async (userId) => {
+		  const userParams = { TableName: 'admin', Key: { id:userId } };
+		  const userData = await DocumentClient.get(userParams).promise();
+		  return userData.Item;
+		})
+	  );
+	  console.log('chatData',chatData,uniqueUserIds);
+
+	  return {data:userDetails};
+  } catch (error) {
+	  return {data:error}
+	 // res.status(500).json({ error: error.message });
+	}
+  }
+
 const generateUpdateQuery = (fields) => {
 	let exp = {
 		UpdateExpression: 'set',
@@ -329,6 +362,7 @@ module.exports = {
 	getAllItems,
 	getAdminMessage,
 	getUserMessage,
+	getUsersMessage,
 	countRecords,
 	renameColumn,
 	filterItemsByQuery,
