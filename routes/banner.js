@@ -49,7 +49,7 @@ router.post('/', verifyToken, upload.single("file"), async (req, res) => {
 				title:body.title,
 				content:body.content,
 				image:image,
-				isActive:body.isActive || "true",
+				isActive:body.isActive || "false",
 				createDate:new Date().toISOString(),
 				updatedDate:new Date().toISOString()
 			}
