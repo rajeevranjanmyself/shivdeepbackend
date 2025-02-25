@@ -76,7 +76,7 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 				createDate:new Date().toISOString(),
 				updatedDate:new Date().toISOString()
 			}
-			//const newItem = await insertItem(TABLE_NAME, item);
+			 await insertItem(TABLE_NAME, item);
 			res.success({data:item, message:"chat send successfuly"})
 		}
 	} catch (err) {
