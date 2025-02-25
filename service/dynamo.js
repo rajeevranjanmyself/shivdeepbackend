@@ -192,6 +192,16 @@ const getUserMessage = async(senderId, receiverId)=> {
 }
 
 
+const getConditionalRecords = async(params) => {
+	try {
+	  const result = await DocumentClient.scan(params).promise();
+	  console.log("Recent Records:", result.Items);
+	  return result.Items;
+	} catch (error) {
+	  console.error("Error fetching recent records:", error);
+	}
+  }
+
 const getAdminMessage = async(adminId)=> {
   // Check if user is an admin
   const adminCheckParams = {
@@ -360,6 +370,7 @@ const renameColumn = async(oldName, newName) => {
 module.exports = {
 	DocumentClient,
 	getAllItems,
+	getConditionalRecords,
 	getAdminMessage,
 	getUserMessage,
 	getUsersMessage,

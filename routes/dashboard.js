@@ -5,16 +5,37 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const TABLE_NAME = 'gallery';
-
 const upload = multer({ storage: multer.memoryStorage() });
-const { getAllItems, generateRandomString, countRecords,getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
+const { getAllItems, generateRandomString,getConditionalRecords, countRecords, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 router.get('/', async (req, res) => {
 	try {
 		const itemsBanner = await getAllItems('banner');
 		const itemsEvents = await getAllItems('events');
-		const totalUser = await countRecords('users');
-		const totalNews = await countRecords('news');
+		const userParams = {
+			TableName: 'users',
+			FilterExpression: "isMember = :boolTrue OR isMember = :stringTrue",
+			ExpressionAttributeValues: {
+			  ":boolTrue": true,      // Boolean true
+			  ":stringTrue": "true",  // String "true"
+			},
+		  };
+		const totalUser = await getConditionalRecords(userParams);
+		// Get the timestamp for 7 days ago
+		const sevenDaysAgo = new Date();
+		sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+	
+		// Convert to YYYY-MM-DD format
+		const formattedDate = sevenDaysAgo.toISOString().split("T")[0];
+	
+		const newsParams = {
+		TableName: 'news',
+		FilterExpression: "updatedDate >= :sevenDaysAgo",
+		ExpressionAttributeValues: {
+			":sevenDaysAgo": formattedDate,
+		},
+		};
+		  
+		const totalNews = await getConditionalRecords(newsParams);
 		res.success({data:{
 			banner:itemsBanner.Items,
 			events:itemsEvents.Items,

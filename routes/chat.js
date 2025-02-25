@@ -10,14 +10,20 @@ require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
 const TABLE_NAME = 'chat';
-// Multer file filter (allow only images & videos)
+// Multer file filter (allow images, videos, and documents)
 const fileFilter = (req, file, cb) => {
-	if (file.mimetype.startsWith("image") || file.mimetype.startsWith("video")) {
+	if (
+	  file.mimetype.startsWith("image") || 
+	  file.mimetype.startsWith("video") ||
+	  file.mimetype.startsWith("application") || 
+	  file.mimetype.startsWith("text")
+	) {
 	  cb(null, true);
 	} else {
-	  cb(new Error("Only image and video files are allowed"), false);
+	  cb(new Error("Only image, video, and document files are allowed"), false);
 	}
   };
+  
 const upload = multer({ storage: multer.memoryStorage(), fileFilter });
 const { getAllItems, batchInsertLargeDataset, 
 	getAdminMessage,
@@ -26,7 +32,7 @@ const { getAllItems, batchInsertLargeDataset,
 	generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 
 
-router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "video" }]), async (req, res) => {
+router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "video" },{ name: "document" }]), async (req, res) => {
 	const body = req.body;
 	try {
 		if(!body.senderId){
@@ -39,6 +45,7 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 			
 			const imageFile = req.files.image ? req.files.image[0] : null;
 			const videoFile = req.files.video ? req.files.video[0] : null;
+			const documentFile = req.files.document ? req.files.document[0] : null;
 			let image = ""
 			if(imageFile){			
 				const bucketName = process.env.AWS_S3_BUCKET_NAME;
@@ -61,6 +68,17 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 				console.log(result);
 				video= result.Location				
 			}
+			let document = ""
+			if(documentFile){			
+				const bucketName = process.env.AWS_S3_BUCKET_NAME;
+				const fileContent = documentFile.buffer; // File content from Multer
+				const newKey = `${Date.now()}_${documentFile.originalname}`; // Unique filename
+				const contentType = documentFile.mimetype;
+				// Upload to S3
+				const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
+				console.log(result);
+				document= result.Location				
+			}
 
 			body.id = uuidv4();
 			const item = {
@@ -70,6 +88,7 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 				text:body.message,
 				image:image,
 				video:video,
+				document:document,
 				sent: true,
 				received: true,
 				pending: false,
