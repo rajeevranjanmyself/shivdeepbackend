@@ -28,7 +28,7 @@ router.get('/:id', async (req, res) => {
 	}
 });
 
-router.post('/', verifyToken,async (req, res) => {
+router.post('/',async (req, res) => {
 	const body = req.body;	
 	try {
 		if(!body.name){
