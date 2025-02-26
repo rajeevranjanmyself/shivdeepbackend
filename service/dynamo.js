@@ -188,7 +188,10 @@ const getUserMessage = async(senderId, receiverId)=> {
 		  ":receiver": receiverId,
 		},
 	  };
-	return await DocumentClient.scan(params).promise();
+	  const result = await DocumentClient.scan(params).promise();
+	  const sortedItems = result.Items.length>0? 
+	  result.Items.sort((a, b) => new Date(a.updatedDate) - new Date(b.updatedDate)):[]
+	return sortedItems
 }
 
 
@@ -235,7 +238,11 @@ const getAdminMessage = async(adminId)=> {
         return userData.Item;
       })
     );
-	return {data:userDetails};
+	const result = userDetails;
+
+	const sortedItems = result.length>0? 
+	result.sort((a, b) => new Date(b.updatedDate) - new Date(a.updatedDate)):[]
+  return {data:sortedItems}
 } catch (error) {
 	return {data:error}
    // res.status(500).json({ error: error.message });
@@ -267,8 +274,11 @@ const getUsersMessage = async(userId)=> {
 		})
 	  );
 	  console.log('chatData',chatData,uniqueUserIds);
+	  const result = userDetails;
 
-	  return {data:userDetails};
+	  const sortedItems = result.length>0? 
+	  result.sort((a, b) => new Date(b.updatedDate) - new Date(a.updatedDate)):[]
+	return {data:sortedItems}
   } catch (error) {
 	  return {data:error}
 	 // res.status(500).json({ error: error.message });
