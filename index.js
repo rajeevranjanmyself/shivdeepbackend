@@ -56,7 +56,7 @@ app.use("/api/v1/chat", chatRoute);
 
 //app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
 // Create HTTPS Server
-// const server = https.createServer(options, app)
+const server = https.createServer(options, app)
 server.listen(PORT, () => {
     console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
   });
