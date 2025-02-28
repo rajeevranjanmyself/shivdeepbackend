@@ -29,6 +29,7 @@ const { getAllItems, batchInsertLargeDataset,
 	getAdminMessage,
 	getUserMessage,
 	getUsersMessage,
+	getConditionalRecords,
 	generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 
 
@@ -95,11 +96,32 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 				createDate:new Date().toISOString(),
 				updatedDate:new Date().toISOString()
 			}
-			 await insertItem(TABLE_NAME, item);
+			const chatParams = {
+				TableName: 'chat',
+				FilterExpression: "senderId = :senderIdData AND receiverId = :receiverIdData",
+				ExpressionAttributeValues: {
+				  ":senderIdData": body.senderId,      // Boolean true
+				  ":receiverIdData": body.receiverId,  // String "true"
+				},
+			  };
+			const firstTimeChat = await getConditionalRecords(chatParams);
+			  console.log('firstTimeChat',firstTimeChat);
+			  if(firstTimeChat.length>0){
+				await insertItem(TABLE_NAME, item);
+			  }else{
+				await insertItem(TABLE_NAME, item);
+				item.id = uuidv4();
+				item.senderId  = body.receiverId
+				item.receiverId  = body.senderId
+				item.text  = 'Thank you for reaching out. I appreciate your message and will get back to you shortly or as soon as possible.'
+				item.createDate =new Date().toISOString(),
+				item.updatedDate =new Date().toISOString()
+				await insertItem(TABLE_NAME, item);
+			  } 
 			res.success({data:item, message:"chat send successfuly"})
 		}
 	} catch (err) {
-		res.errors({message:'Something went wrong'})
+		res.errors({message:'Something went wrong',data:err})
 	}
 });
 
