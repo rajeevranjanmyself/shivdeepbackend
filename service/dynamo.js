@@ -42,7 +42,7 @@ const comparePassword = async(plainPassword, hashedPassword) => {
 }
 
 // Function to generate a JWT
-const generateAuthToken =async(payload, expiresIn = '24h') =>{
+const generateAuthToken =async(payload, expiresIn = '7d') =>{
   try {
     // Create the token
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn });
