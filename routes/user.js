@@ -52,7 +52,7 @@ router.get('/checkUserExist/:mobile', async (req, res) => {
 
 
 router.post('/socialLogin', async (req, res) => {
-	const body = req.body;	
+	const body = r
 	try {
 		if(!body.mobile){
 			res.errors({message:'Mobile Number Required'})
@@ -429,6 +429,7 @@ router.post('/users', upload.single("file"), async (req, res) => {
 					dateOfJoining:body.dateOfJoining?new Date(body.dateOfJoining).toISOString() : "",
 					image:image,
 					isMember:isMember,
+					isSocialLogin:"false",
 					memberId:Date.now(),
 					sessionId:body.sessionId || "1234",
 					referralCode:await generateRandomString(8),
