@@ -79,7 +79,14 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 	const body = req.body;
 	try {
 		const findNews = await getSingleItemById(TABLE_NAME, id)
-		console.log('findNews',findNews,body);
+		const userDetails = await getSingleItemById('users', req.user.id);
+		console.log('findNews',findNews,userDetails);
+		let userName = ''
+		let userImage = ''
+		if(userDetails.Item){
+			userImage = userDetails.Item?.image
+			userName = userDetails.Item?.fullName
+		}	
 		if(findNews.Item){
 			const data = findNews.Item
 			let image = data.image
@@ -107,7 +114,7 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 			}
 			
 			if(body.comment){
-				comment = [...data.comment, {id:req.user.id,comment:body.comment}]
+				comment = [...data.comment, {id:req.user.id,image:userImage,name:userName,comment:body.comment}]
 			}
 			
 			if(body.share){
