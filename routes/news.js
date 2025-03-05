@@ -79,7 +79,7 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 	const body = req.body;
 	try {
 		const findNews = await getSingleItemById(TABLE_NAME, id)
-		console.log('findNews',findNews);
+		console.log('findNews',findNews,body);
 		if(findNews.Item){
 			const data = findNews.Item
 			let image = data.image
@@ -100,8 +100,10 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 				console.log(result);
 				image= result.Location				
 			}
-			if(body.like){
-				like = [...data.like, req.user.id]
+			if(body.like == "true"){
+				like = data.like.includes(req.user.id)?[...data.like]:[...data.like, req.user.id]
+			}else if(body.like == "false"){
+				like = data.like.length>0? data.like.filter(id => id !== req.user.id) :[]
 			}
 			
 			if(body.comment){
@@ -109,7 +111,7 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 			}
 			
 			if(body.share){
-				share = [...data.share, req.user.id]
+				share = data.share.includes(req.user.id)?[...data.share]:[...data.share, req.user.id]
 			}
 			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle
 			const itemObject = {
