@@ -23,6 +23,11 @@ router.get('/users', verifyToken, async (req, res) => {
 	}
 });
 
+// API route to return translated message
+router.get("/greet", (req, res) => {
+	res.success({ message: res.__("greeting") }); // Will return "नमस्ते" if Hindi is selected
+});
+
 router.get('/checkUserExist/:mobile', async (req, res) => {
 	const mobile = req.params.mobile;	
 	console.log('mobile---',mobile);
@@ -173,6 +178,7 @@ router.post('/login', async (req, res) => {
 						data.sessionId = 'd8039ce8-3088-41f1-8e08-10bd3b99ce1e'
 						const itemObject = {
 							sessionId: data.sessionId,
+							fcmToken: body.fcmToken,
 							updatedDate:new Date().toISOString()
 						}
 						await updateItem(TABLE_NAME, data.id, itemObject)
@@ -189,6 +195,7 @@ router.post('/login', async (req, res) => {
 						data.sessionId = resp.Details
 						const itemObject = {
 							sessionId: data.sessionId,
+							fcmToken: body.fcmToken,
 							updatedDate:new Date().toISOString()
 						}
 						await updateItem(TABLE_NAME, data.id, itemObject)
